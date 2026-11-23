@@ -193,6 +193,7 @@
     var watchTvl = watch.reduce(function (n, r) { return n + r.tvl_usd; }, 0);
     var top = DATA.rows[0];
     var growing = watch.filter(function (r) { return r.change_7d !== null && r.change_7d >= 2; }).length;
+    var topFactors = fmtMult(top.category_multiple) + ' precedent · ' + fmtMult(growthMultOf(top, DATA.model)) + ' growth · ' + fmtMult(breadthMultOf(top, DATA.model)) + ' breadth · ' + fmtMult(maturityMultOf(top, DATA.model)) + ' maturity';
     return el('section', { class: 'hero' },
       el('div', null,
         el('div', { class: 'eyebrow', text: 'Pre-token radar · ' + DATA.rows.length + ' protocols scored' }),
@@ -200,7 +201,7 @@
         el('p', null,
           'The watchlist holds ', el('b', { text: fmtUsd(watchTvl) }), ' of TVL across ', el('b', { text: String(watch.length) }),
           ' protocols with no token on record. ', el('b', { text: top.name }), ' leads at ', el('b', { text: fmtUsd(top.implied_value_usd) }),
-          ' of implied value. Only ', el('b', { text: String(growing) }), ' of the watchlist grew in the last seven days. Implied value is a model, not a price, and no launch is guaranteed.'
+          ' of implied value (', el('b', { text: topFactors }), '). Only ', el('b', { text: String(growing) }), ' of the watchlist grew in the last seven days. Implied value is a model, not a price, and no launch is guaranteed.'
         )
       ),
       el('div', { class: 'stats' },
@@ -233,6 +234,10 @@
           el('div', null, el('span', { text: 'TVL' }), el('b', { text: fmtUsd(r.tvl_usd) })),
           el('div', null, el('span', { text: '7d' }), el('b', { class: r.change_7d !== null && r.change_7d >= 0 ? 'pos' : 'neg', text: fmtPct(r.change_7d) })),
           el('div', null, el('span', { text: 'Age' }), el('b', { text: fmtAge(r.age_days) }))
+        ),
+        el('div', { class: 'card-factors' },
+          el('span', { text: 'Factors G·B·M' }),
+          el('span', { class: 'num', text: fmtMult(growthMultOf(r, DATA.model)) + ' · ' + fmtMult(breadthMultOf(r, DATA.model)) + ' · ' + fmtMult(maturityMultOf(r, DATA.model)) })
         ),
         el('div', { class: 'card-implied' },
           el('span', { text: 'Implied value · ' + fmtMult(r.category_multiple) + ' precedent' }),
@@ -317,6 +322,7 @@
         el('td', { class: 'num ' + growthClass, text: growth }),
         el('td', { class: 'num', text: fmtAge(r.age_days) }),
         el('td', { class: 'num', text: fmtMult(r.category_multiple) }),
+        el('td', { class: 'num factors', text: fmtMult(growthMultOf(r, DATA.model)) + ' · ' + fmtMult(breadthMultOf(r, DATA.model)) + ' · ' + fmtMult(maturityMultOf(r, DATA.model)) }),
         el('td', null, el('div', { class: 'implied' },
           el('div', { class: 'bar', 'aria-hidden': 'true' }, el('i', { style: 'width:' + Math.max(3, Math.round((r.implied_value_usd / max) * 100)) + '%' })),
           el('span', { class: 'num', text: fmtUsd(r.implied_value_usd) })
@@ -337,6 +343,7 @@
             sortHeader('growth', '7d'),
             sortHeader('age', 'Age'),
             sortHeader('multiple', 'Multiple'),
+            el('th', { scope: 'col', text: 'Factors G·B·M' }),
             sortHeader('implied', 'Implied value'),
             el('th', { scope: 'col', text: 'Signals' }),
             el('th', { scope: 'col', text: 'Token' })
@@ -421,8 +428,8 @@
   dialog.addEventListener('close', function () { state.selected = null; writeHash(); });
 
   function factorRow(label, input, right, pct) {
-    return el('div', null,
-      el('div', { style: 'display:flex;justify-content:space-between;gap:12px;' },
+    return el('div', { class: 'frow' },
+      el('div', { class: 'frow-top' },
         el('span', { text: label }),
         el('b', { text: input + '  ·  ' + right })
       ),
@@ -441,6 +448,16 @@
     var precNote = row.precedent_n > 0
       ? row.precedent_n + ' traded protocols in ' + (row.category || 'this category') + ' carry this multiple.'
       : 'No traded precedent in ' + (row.category || 'this category') + ': the global median across all traded protocols applies.';
+    var lifts = [
+      { name: 'growth', mult: growthMultOf(row, DATA.model) },
+      { name: 'breadth', mult: breadthMultOf(row, DATA.model) },
+      { name: 'maturity', mult: maturityMultOf(row, DATA.model) }
+    ];
+    var strongest = lifts[0];
+    var weakest = lifts[0];
+    lifts.forEach(function (f) { if (f.mult > strongest.mult) strongest = f; if (f.mult < weakest.mult) weakest = f; });
+    function signedLift(mult) { var p = (mult - 1) * 100; return (p >= 0 ? '+' : '') + p.toFixed(1) + '%'; }
+    var dragText = 'Strongest lift: ' + strongest.name + ' ' + fmtMult(strongest.mult) + ' (' + signedLift(strongest.mult) + '). Biggest drag: ' + weakest.name + ' ' + fmtMult(weakest.mult) + ' (' + signedLift(weakest.mult) + ' against a neutral 1.000).';
     dialog.appendChild(el('div', { class: 'detail-head' },
       el('div', null,
         el('span', { class: 'brand-name', text: 'Rank ' + row.rank + ' of ' + DATA.board_size + (row.on_watchlist ? ' · Watchlist' : ' · Early radar') }),
@@ -463,6 +480,7 @@
         factorRow('Chain breadth', (row.chains || []).length + ' chains', 'x' + breadthMultOf(row, DATA.model).toFixed(3), (breadthMultOf(row, DATA.model) / 1.2) * 100),
         factorRow('Maturity', fmtAge(row.age_days), 'x' + maturityMultOf(row, DATA.model).toFixed(3), maturityMultOf(row, DATA.model) * 100)
       ),
+      el('p', { class: 'sub', text: dragText }),
       el('p', { class: 'sub', text: precNote + ' The page recomputes this row as ' + fmtUsd(recomputed) + (recomputed === row.implied_value_usd ? ', the same number the board carries.' : ', which differs from the board: the data would be stale.') + ' This is an estimate, not a price.' })
     ));
     dialog.appendChild(el('section', { class: 'detail-section' },

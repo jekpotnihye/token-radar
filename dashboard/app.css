@@ -187,6 +187,12 @@ tbody tr[data-selected="true"] { background: var(--surface-3); }
 .equation { display: grid; gap: var(--step-2); font-family: var(--font-num); font-size: 13px; }
 .equation > div { display: flex; justify-content: space-between; gap: var(--step-3); padding: var(--step-2) 0; border-bottom: 1px dashed var(--border); }
 .equation > div:last-child { border-bottom: 0; }
+.equation > div.frow { display: block; }
+.frow-top { display: flex; justify-content: space-between; gap: var(--step-3); }
+.card-factors { display: flex; align-items: baseline; justify-content: space-between; gap: var(--step-3); border-top: 1px solid var(--border); padding-top: var(--step-3); }
+.card-factors span { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+.card-factors .num { color: var(--ink); font-size: 13px; text-transform: none; letter-spacing: 0; }
+td.factors { font-size: 13px; }
 .equation span { color: var(--muted); }
 .equation .fbar { display: block; height: 4px; border-radius: 2px; background: var(--surface-3); margin-top: 3px; overflow: hidden; }
 .equation .fbar i { display: block; height: 100%; background: var(--accent); }
