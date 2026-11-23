@@ -201,7 +201,7 @@
         el('p', null,
           'The watchlist holds ', el('b', { text: fmtUsd(watchTvl) }), ' of TVL across ', el('b', { text: String(watch.length) }),
           ' protocols with no token on record. ', el('b', { text: top.name }), ' leads at ', el('b', { text: fmtUsd(top.implied_value_usd) }),
-          ' of implied value (', el('b', { text: topFactors }), '). Only ', el('b', { text: String(growing) }), ' of the watchlist grew in the last seven days. Implied value is a model, not a price, and no launch is guaranteed.'
+          ' of implied value (', el('b', { text: topFactors }), '). Only ', el('b', { text: String(growing) }), ' of the watchlist grew 2% or more in the last seven days. Implied value is a model, not a price, and no launch is guaranteed.'
         )
       ),
       el('div', { class: 'stats' },
@@ -334,7 +334,7 @@
     });
     return el('div', { class: 'panel' },
       el('div', { class: 'table-wrap' },
-        el('table', null,
+        el('table', { class: 'board' },
           el('caption', { class: 'sub', text: 'Pre-token protocols, strongest implied value first. The multiple is the traded precedent for the row\'s category. Select a row for its model and farm plan.' }),
           el('thead', null, el('tr', null,
             sortHeader('implied', 'Rank'),
