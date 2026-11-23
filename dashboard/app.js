@@ -260,7 +260,13 @@
   function controls() {
     var categories = Array.from(new Set(DATA.rows.map(function (r) { return r.category || 'Other'; }))).sort();
     var search = el('input', { type: 'search', id: 'q', placeholder: 'Search name, category or chain', value: state.q, 'aria-label': 'Search the board' });
-    search.addEventListener('input', function () { state.q = search.value; writeHash(); render(); });
+    search.addEventListener('input', function () {
+      var pos = 0;
+      try { pos = search.selectionStart || 0; } catch (e) { pos = 0; }
+      state.q = search.value; writeHash(); render();
+      var next = document.getElementById('q');
+      if (next) { next.focus(); try { next.setSelectionRange(pos, pos); } catch (e2) {} }
+    });
     var select = el('select', { id: 'category', 'aria-label': 'Filter by category' },
       el('option', { value: 'all', text: 'All categories' }),
       categories.map(function (c) { return el('option', { value: c, text: c, selected: c === state.category ? 'selected' : null }); })
@@ -361,7 +367,7 @@
         el('td', { class: 'num', text: 'live' }),
         el('td', null, el('div', { class: 'name' }, el('b', { text: r.name }), el('span', { class: 'sub', text: (r.category || 'Other') + ' on ' + (r.chains && r.chains.length ? r.chains.slice(0, 2).join(', ') : 'an unnamed chain') }))),
         el('td', { class: 'num', text: fmtUsd(r.tvl_usd) }),
-        el('td', { class: 'num ' + (r.change_7d !== null && r.change_7d >= 0 ? 'pos' : 'neg'), text: fmtPct(r.change_7d) }),
+        el('td', { class: 'num ' + (r.change_7d === null ? '' : r.change_7d >= 0 ? 'pos' : 'neg'), text: fmtPct(r.change_7d) }),
         el('td', { class: 'num', text: fmtUsd(r.mcap_usd) }),
         el('td', { class: 'num', text: r.multiple === null ? 'n/a' : fmtMult(r.multiple) }),
         el('td', null, el('span', { class: 'status', text: 'already trades' }))
@@ -401,7 +407,7 @@
         el('div', { class: 'factor' }, el('b', { text: 'Precedent multiple' }), el('span', { class: 'num', text: 'median mcap / TVL, per category' }), el('span', { text: 'What traded tokens in the same category are worth against their TVL. At least 3 traded protocols, else the global median. Clamped 0.08–0.80.' })),
         el('div', { class: 'factor' }, el('b', { text: 'Growth' }), el('span', { class: 'num', text: '1 + clamp(7d, -40, 60) / 100 x ' + m.growth_weight }), el('span', { text: 'Momentum into the launch window. Missing growth reads as zero: neutral, never a penalty.' })),
         el('div', { class: 'factor' }, el('b', { text: 'Breadth' }), el('span', { class: 'num', text: '1 + 0.04 x min(chains - 1, 5)' }), el('span', { text: 'Reach. Each extra chain is more users, more venues, more reasons a launch lands.' })),
-        el('div', { class: 'factor' }, el('b', { text: 'Maturity' }), el('span', { class: 'num', text: '0.75 + 0.25 x min(age, 1095) / 1095' }), el('span', { text: 'Proof of running. Age is time since first listing; unknown age uses ' + m.unknown_age_days + ' days. The smallest factor: older never means likelier to launch.' }))
+        el('div', { class: 'factor' }, el('b', { text: 'Maturity' }), el('span', { class: 'num', text: '0.75 + 0.25 x min(age, 1095) / 1095' }), el('span', { text: 'Proof of running. Age is the time since DefiLlama began tracking the protocol; unknown age uses ' + m.unknown_age_days + ' days. The smallest factor: older never means likelier to launch.' }))
       ),
       el('div', null,
         el('h3', { text: 'Traded precedents, from this snapshot alone' }),
@@ -458,6 +464,7 @@
     lifts.forEach(function (f) { if (f.mult > strongest.mult) strongest = f; if (f.mult < weakest.mult) weakest = f; });
     function signedLift(mult) { var p = (mult - 1) * 100; return (p >= 0 ? '+' : '') + p.toFixed(1) + '%'; }
     var dragText = 'Strongest lift: ' + strongest.name + ' ' + fmtMult(strongest.mult) + ' (' + signedLift(strongest.mult) + '). Biggest drag: ' + weakest.name + ' ' + fmtMult(weakest.mult) + ' (' + signedLift(weakest.mult) + ' against a neutral 1.000).';
+    var chainCount = (row.chains || []).length;
     dialog.appendChild(el('div', { class: 'detail-head' },
       el('div', null,
         el('span', { class: 'brand-name', text: 'Rank ' + row.rank + ' of ' + DATA.board_size + (row.on_watchlist ? ' · Watchlist' : ' · Early radar') }),
@@ -477,7 +484,7 @@
         factorRow('TVL', fmtUsd(row.tvl_usd), 'base', 100),
         factorRow('Precedent multiple', row.precedent_n > 0 ? row.precedent_n + ' traded protocols' : 'global median', 'x' + row.category_multiple.toFixed(3), (row.category_multiple / 0.8) * 100),
         factorRow('Seven-day growth', fmtPct(row.change_7d), 'x' + growthMultOf(row, DATA.model).toFixed(3), (growthMultOf(row, DATA.model) / 1.3) * 100),
-        factorRow('Chain breadth', (row.chains || []).length + ' chains', 'x' + breadthMultOf(row, DATA.model).toFixed(3), (breadthMultOf(row, DATA.model) / 1.2) * 100),
+        factorRow('Chain breadth', chainCount + (chainCount === 1 ? ' chain' : ' chains'), 'x' + breadthMultOf(row, DATA.model).toFixed(3), (breadthMultOf(row, DATA.model) / 1.2) * 100),
         factorRow('Maturity', fmtAge(row.age_days), 'x' + maturityMultOf(row, DATA.model).toFixed(3), maturityMultOf(row, DATA.model) * 100)
       ),
       el('p', { class: 'sub', text: dragText }),
